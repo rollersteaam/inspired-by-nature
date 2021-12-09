@@ -1,24 +1,10 @@
-from typing import Dict, Tuple, Set, List, Callable
+import math
 import random
+from functools import reduce
+from typing import Dict, Tuple, Set, List, Callable
 
 from classes import *
 
-# 1. Randomly distribute small amounts of pheromone (between 0 and 1) on the construction graph.
-
-# def init_graph()
-
-# Graph:
-# Node:
-# Connecting Nodes: List of Node
-
-# List of nodes and edges list[set[node (other indices in the list): int]]
-# List of pheromones (indices are nodes) list[pheromone: int]
-# Paths: list[list[node: str]]
-# Pheromone = 100 / fitness
-# Fitness = difference between biggest bin and smallest bin
-
-# 013211103
-# k0b1, k1b2, k2b3
 
 def create_bin_packing_graph(items: List[Item], bins: int) -> Graph:
     """
@@ -139,21 +125,159 @@ def bin_weight(bin: List[Item]) -> int:
     return weight
 
 
-def get_ant_colony_best_fitness(graph: Graph, evaluation_limit: int, evaporation_rate: float, fitness_function: Callable[[List[str]], int]) -> Tuple[List[str], int]:
+def max_min_bin_diff_fitness(bins: List[List[Item]]) -> int:
     """
-    Runs the ant colony optimisation (ACO) algorithm and returns the best 
-    candidate path through the supplied nodes.
+    Calculates the difference between the biggest and smallest bin. Can be used
+    as a fitness function for ant colony optimisation.
+
+    Args:
+        bins (List[List[Item]]): A list of bins with items in.
+
+    Returns:
+        (int): The difference between the biggest and smallest bin.
+    """
+    smallest_bin: int = math.inf
+    biggest_bin: int = 0
+
+    for b in bins:
+        weight = bin_weight(b)
+
+        smallest_bin = weight if weight < smallest_bin else smallest_bin
+        biggest_bin = weight if weight > biggest_bin else biggest_bin
+
+    return biggest_bin - smallest_bin
+
+
+def generate_paths_with_pheromones(graph: Graph, pheromone_table: Dict[Tuple[str, str], float], amount: int) -> List[List[str]]:
+    """
+    Generates a set of graph paths with a pheromone bias, paths with highest
+    pheromone values are more likely to be travelled.
+
+    Args:
+        graph (Graph): The graph.
+        pheromone_table (Dict[Tuple[str, str], float]): A dictionary mapping
+            links between two nodes to a pheromone value.
+        amount (int): The amount of paths to generate.
+
+    Returns:
+        (List[List[str]]): The generated paths.
+    """
+    paths = []
+
+    for _ in range(amount):
+        path = ["s"]
+        current_node = "s"
+
+        while current_node != "e":
+            # Find the next best node to travel
+            possible_nodes = graph.nodes[current_node]
+            next_node = None
+
+            # Create a table of "travel to node" probabilities
+            pheromone_total = reduce(lambda sum, node: sum + pheromone_table[(current_node, node)], possible_nodes, 0)
+            probability_table = []
+            running_total = 0
+
+            for node in possible_nodes:
+                probability = pheromone_table[(current_node, node)] / pheromone_total
+                running_total += probability
+                probability_table.append((node, running_total))
+
+            # TODO: Does this break sometimes because the final value may not be 1?
+
+            # Randomly choose which node to travel to
+            random_number = random.random()
+
+            for pair in probability_table:
+                probability = pair[1]
+
+                if random_number <= probability:
+                    node = pair[0]
+
+                    next_node = node
+                    break
+
+            # Travel to the node
+            path.append(next_node)
+            current_node = next_node
+
+        # Submit path
+        paths.append(path)
+
+    return paths
+
+
+def get_bin_packing_ant_colony_best_fitness(graph: Graph, items: List[Item], bins: int, per_loop_limit: int, evaluation_limit: int, evaporation_rate: float, fitness_function: Callable[[List[List[Item]], int], int]) -> Tuple[List[str], int]:
+    """
+    Runs the ant colony optimisation (ACO) algorithm for bin packing
+    and returns the best candidate path through the supplied nodes.
 
     Args:
         graph (Graph): The graph to evaluate.
-        fitness_function (Callable[[List[str]], int]): A function that takes
-            a candidate path and returns a fitness value for optimisation.
+        items (List[Item]): The items used for the bin packing problem.
+        bins (int): The amount of bins to sort into.
+        per_loop_limit (int): How many paths to traverse per loop before
+            evaporation.
+        evaluation_limit (int): Maximum number of fitness evaluations overall.
+        evaporation_rate (float): The amount to reduce pheromones by after
+            a loop of evaluations.
+        fitness_function (Callable[[List[List[Item]], int]): A function that 
+            takes a list of bins and returns a fitness value for optimisation.
 
     Returns:
         (Tuple[List[str], int]): A tuple of the path taken and the fitness
             value for it.
     """
-    graph = create_bin_packing_graph()
-    # pheromone_table: Dict[Tuple[str, str], int] = create_pheromone_table(edges)
-    # paths: List[List[str]] = generate_bin_packing_paths(nodes, path_limit)
-    pass
+    pheromone_table: Dict[Tuple[str, str], float] = {}
+    total_evaluations = 0
+
+    best_fitness = math.inf
+    best_path: List[List[str]] = None
+
+    while total_evaluations < evaluation_limit:
+        # 1. Randomly distribute small amounts of pheromone.
+        for edge in graph.edges:
+            pheromone_table[edge] = 1 * random.random()
+
+        # 2. Generate a set of ant paths from S (start) to E (end)
+        paths = generate_paths_with_pheromones(graph, pheromone_table, per_loop_limit)
+
+        # 3. Update the pheromone in your pheromone table for each ant’s path according to its fitness.
+        for path in paths:
+            bin_list = convert_path_to_bins(items, bins, path)
+            fitness = fitness_function(bin_list)
+            pheromone = 100 / fitness
+
+            if fitness < best_fitness:
+                best_fitness = fitness
+                best_path = path
+
+            ## Add the pheromone to each edge in the path
+            for r in range(len(path) - 1):
+                current_node = path[r]
+                next_node = path[r + 1]
+
+                pheromone_table[(current_node, next_node)] += pheromone
+
+        # 4. Evaporate the pheromone for all links in the graph.
+        for edge in graph.edges:
+            pheromone_table[edge] *= evaporation_rate
+
+        total_evaluations += per_loop_limit
+
+    return best_path, best_fitness
+
+
+    # Generating Ant Paths: An ant will traverse your construction graph by making a decision at each new item it comes to (i.e. an ant at S can choose to go to bin 1, 2 or 3 in the illustration above). This selection is made at random, but biased by the amount of pheromone on the choices ahead (e.g. if an ant is placed at position S and bin 1 has a pheromone value of 0.5, bin 2 has a pheromone value of 0.8 and bin 3 has a pheromone value of 0.1, the ant should have a 5/14 chance of selecting bin 1, an 8/14 chance of selecting bin 2, and a 1/14 chance of selecting bin 3). This should be repeated for all k variables and b bins. There is no local heuristic for this implementation.
+
+# for node, connections in nodes.items():
+#     # print(f"Node {node} connects to {connections}")
+#     set_iter = iter(connections)
+#     print(f"       /------>{next(set_iter)}")
+#     print("      /")
+#     print("     /")
+#     print(f"{node} ------>{next(set_iter)}")
+#     print("     /")
+#     print("      /")
+#     print(f"       /------>{next(set_iter)}")
+#     print("")
