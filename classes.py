@@ -4,6 +4,12 @@ from typing import Dict, Set, Tuple
 class Item:
     def __init__(self, weight: int):
         self.weight = weight
+    
+    def __str__(self) -> str:
+        return f"{self.weight}"
+
+    def __repr__(self):
+        return f"{self.weight}"
 
 
 class Graph:

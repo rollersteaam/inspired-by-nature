@@ -1,0 +1,38 @@
+% Encoding: UTF-8
+
+@Book{psychology-of-music,
+  title     = {{P}sychology of {M}usic: {F}rom {S}ound to {S}ignificance},
+  publisher = {Psychology Press},
+  year      = {2010},
+  author    = {Siu-Lan Tan and Peter Pfordresher and Rom Harré},
+  editor    = {Psychology Press},
+}
+
+@Article{expression-robustness,
+  author  = {Timmers, Renee and Ashley, Richard},
+  title   = {{E}motional ornamentation in performances of a {H}andel sonata.},
+  journal = {Music Perception},
+  year    = {2007},
+}
+
+@Article{circumplex-affect,
+  author  = {Russell, James},
+  title   = {A Circumplex Model of Affect},
+  journal = {Journal of Personality and Social Psychology},
+  year    = {1980},
+  volume  = {39},
+  pages   = {1161-1178},
+  month   = {12},
+  doi     = {10.1037/h0077714},
+}
+
+@Article{gems,
+  author  = {Marcel Zentner and Didier Grandjean and Klaus R. Scherer},
+  title   = {Emotions evoked by the sound of music: characterization, classification, and measurement.},
+  journal = {Emotion},
+  year    = {2008},
+  volume  = {8 4},
+  pages   = {494-521},
+}
+
+@Comment{jabref-meta: databaseType:bibtex;}

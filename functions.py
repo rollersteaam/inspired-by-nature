@@ -168,12 +168,12 @@ def generate_paths_with_pheromones(graph: Graph, pheromone_table: Dict[Tuple[str
         path = ["s"]
         current_node = "s"
 
+        # Find the next node to travel
         while current_node != "e":
-            # Find the next best node to travel
             possible_nodes = graph.nodes[current_node]
             next_node = None
 
-            # Create a table of "travel to node" probabilities
+            ## Create a table of "travel to node" probabilities
             pheromone_total = reduce(lambda sum, node: sum + pheromone_table[(current_node, node)], possible_nodes, 0)
             probability_table = []
             running_total = 0
@@ -185,7 +185,7 @@ def generate_paths_with_pheromones(graph: Graph, pheromone_table: Dict[Tuple[str
 
             # TODO: Does this break sometimes because the final value may not be 1?
 
-            # Randomly choose which node to travel to
+            ## Randomly choose which node to travel to
             random_number = random.random()
 
             for pair in probability_table:
@@ -197,7 +197,7 @@ def generate_paths_with_pheromones(graph: Graph, pheromone_table: Dict[Tuple[str
                     next_node = node
                     break
 
-            # Travel to the node
+            ## Travel to the node
             path.append(next_node)
             current_node = next_node
 
@@ -268,7 +268,12 @@ def get_bin_packing_ant_colony_best_fitness(graph: Graph, items: List[Item], bin
     return best_path, best_fitness
 
 
-    # Generating Ant Paths: An ant will traverse your construction graph by making a decision at each new item it comes to (i.e. an ant at S can choose to go to bin 1, 2 or 3 in the illustration above). This selection is made at random, but biased by the amount of pheromone on the choices ahead (e.g. if an ant is placed at position S and bin 1 has a pheromone value of 0.5, bin 2 has a pheromone value of 0.8 and bin 3 has a pheromone value of 0.1, the ant should have a 5/14 chance of selecting bin 1, an 8/14 chance of selecting bin 2, and a 1/14 chance of selecting bin 3). This should be repeated for all k variables and b bins. There is no local heuristic for this implementation.
+def print_bins(bins: List[List[Item]]):
+    for i in range(len(bins)):
+        current_bin = bins[i]
+        total = reduce(lambda sum, item: sum + item.weight, current_bin, 0)
+        print(f"Bin {i + 1}:")
+        print(f"{current_bin} = {total}")
 
 # for node, connections in nodes.items():
 #     # print(f"Node {node} connects to {connections}")
